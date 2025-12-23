@@ -17,7 +17,16 @@
     "outDir": "./out",
     "useUnknownInCatchVariables": false,
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "desktop-notifications": ["app/src/lib/desktop-notifications"],
+      "desktop-notifications/*": ["app/src/lib/desktop-notifications/*"],
+      "registry-js": ["app/src/lib/shims/registry-js"],
+      "fs-admin": ["app/src/lib/shims/fs-admin"],
+      "desktop-trampoline": ["app/src/lib/shims/desktop-trampoline"],
+      "keytar": ["app/src/lib/shims/keytar"]
+    }
   },
   "include": ["app/**/*.ts", "app/**/*.tsx", "app/**/*.d.tsx"],
   "exclude": [

@@ -33,7 +33,7 @@ export function getPathSegments(): ReadonlyArray<string> {
     throw new Error('Could not find PATH environment variable')
   }
 
-  return value.data.split(';').filter(x => x.length > 0)
+  return value.data.split(';').filter((x: string) => x.length > 0)
 }
 
 /** Set the user's `Path`. */

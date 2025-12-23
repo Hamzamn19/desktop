@@ -55,6 +55,8 @@ import { CLIAction } from '../lib/cli-action'
 app.setAppLogsPath()
 enableSourceMaps()
 
+console.log('UserData Path:', app.getPath('userData'))
+
 let mainWindow: AppWindow | null = null
 
 const launchTime = now()
@@ -102,12 +104,11 @@ function getExtraErrorContext(): Record<string, string> {
 /** Extra argument for the protocol launcher on Windows */
 const protocolLauncherArg = '--protocol-launcher'
 
-const possibleProtocols = new Set(['x-github-client'])
-if (__DEV_SECRETS__) {
-  possibleProtocols.add('x-github-desktop-dev-auth')
-} else {
-  possibleProtocols.add('x-github-desktop-auth')
-}
+const possibleProtocols = new Set([
+  'x-github-client',
+  'x-github-desktop-dev-auth',
+  'x-github-desktop-auth',
+])
 // Also support Desktop Classic's protocols.
 if (__DARWIN__) {
   possibleProtocols.add('github-mac')
@@ -158,11 +159,30 @@ initializeDesktopNotifications()
 
 function handleAppURL(url: string) {
   log.info('Processing protocol url')
+  console.log('[LOGIN-DEBUG] handleAppURL incoming url:', url)
+  console.log('[LOGIN-DEBUG] handleAppURL mainWindow:', mainWindow ? 'exists' : 'null')
+  console.log('[LOGIN-DEBUG] handleAppURL onDidLoadFns:', onDidLoadFns ? 'queued' : 'null')
+
+  const devAuthProtocol = 'x-github-desktop-dev-auth://'
+  const authProtocol = 'x-github-desktop-auth://'
+  if (url.startsWith(devAuthProtocol)) {
+    url = authProtocol + url.substring(devAuthProtocol.length)
+    console.log('[LOGIN-DEBUG] handleAppURL normalized dev auth url to:', url)
+  } else {
+    console.log('[LOGIN-DEBUG] handleAppURL no protocol normalization applied')
+  }
+
+  console.log('[LOGIN-DEBUG] handleAppURL parsed action next')
   const action = parseAppURL(url)
+  console.log('[LOGIN-DEBUG] handleAppURL action:', action)
   onDidLoad(window => {
     // This manual focus call _shouldn't_ be necessary, but is for Chrome on
     // macOS. See https://github.com/desktop/desktop/issues/973.
     window.focus()
+    console.log(
+      '[LOGIN-DEBUG] handleAppURL sending URL to renderer with action:',
+      action
+    )
     window.sendURLAction(action)
   })
 }
@@ -176,6 +196,20 @@ if (!handlingSquirrelEvent) {
   isDuplicateInstance = !gotSingleInstanceLock
 
   app.on('second-instance', (event, args, workingDirectory) => {
+    console.log('[LOGIN-DEBUG] second-instance argv:', args)
+
+    const prefixes = Array.from(possibleProtocols, p => `${p}://`)
+    const matchingUrl = args.find(arg => prefixes.some(p => arg.startsWith(p)))
+
+    if (matchingUrl !== undefined) {
+      console.log(
+        '[LOGIN-DEBUG] second-instance found protocol url:',
+        matchingUrl
+      )
+    } else {
+      console.log('[LOGIN-DEBUG] second-instance no protocol url detected')
+    }
+
     // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
@@ -187,6 +221,21 @@ if (!handlingSquirrelEvent) {
       }
 
       mainWindow.focus()
+    }
+
+    console.log(
+      '[LOGIN-DEBUG] second-instance routing args to handleCommandLineArguments'
+    )
+
+    // [LOGIN-FIX] Rewrite dev protocol to prod protocol before processing
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] && args[i].startsWith('x-github-desktop-dev-auth://')) {
+        console.log('[LOGIN-FIX] Rewriting URL in argv[' + i + '] to x-github-desktop-auth://')
+        args[i] = args[i].replace(
+          'x-github-desktop-dev-auth://',
+          'x-github-desktop-auth://'
+        )
+      }
     }
 
     handleCommandLineArguments(args)
@@ -204,6 +253,7 @@ if (shellNeedsPatching(process)) {
 app.on('will-finish-launching', () => {
   // macOS only
   app.on('open-url', (event, url) => {
+    console.log('[LOGIN-DEBUG] open-url event received url:', url)
     event.preventDefault()
     handleAppURL(url)
   })
@@ -236,9 +286,11 @@ if (__DARWIN__) {
 }
 
 async function handleCommandLineArguments(argv: string[]) {
+  console.log('[LOGIN-DEBUG] handleCommandLineArguments called with:', argv)
   const args = parseCommandLineArgs(argv, {
     boolean: ['protocol-launcher'],
   })
+  console.log('[LOGIN-DEBUG] handleCommandLineArguments parsed args:', args)
 
   // Desktop registers it's protocol handler callback on Windows as
   // `[executable path] --protocol-launcher "%1"`. Note that extra command
@@ -279,6 +331,15 @@ async function handleCommandLineArguments(argv: string[]) {
     return
   }
 
+  // Check for protocol URLs even without --protocol-launcher flag
+  const prefixes = Array.from(possibleProtocols, p => `${p}://`)
+  const protocolUrl = argv.find(arg => prefixes.some(p => arg.startsWith(p)))
+  if (protocolUrl) {
+    console.log('[LOGIN-DEBUG] Found protocol URL in argv:', protocolUrl)
+    handleAppURL(protocolUrl)
+    return
+  }
+
   if (typeof args['cli-open'] === 'string') {
     handleCLIAction({ kind: 'open-repository', path: args['cli-open'] })
   } else if (typeof args['cli-clone'] === 'string') {
@@ -314,6 +375,10 @@ function setAsDefaultProtocolClient(protocol: string) {
   } else {
     app.setAsDefaultProtocolClient(protocol)
   }
+}
+
+if (process.platform === 'linux') {
+  process.argv.push('--password-store=gnome-libsecret')
 }
 
 if (process.env.GITHUB_DESKTOP_DISABLE_HARDWARE_ACCELERATION) {
@@ -807,11 +872,16 @@ function createWindow() {
  * window has already been loaded, the function will be called immediately.
  */
 function onDidLoad(fn: OnDidLoadFn) {
+  console.log('[LOGIN-DEBUG] onDidLoad called, onDidLoadFns:', onDidLoadFns ? 'queue exists' : 'null', 'mainWindow:', mainWindow ? 'exists' : 'null')
   if (onDidLoadFns) {
+    console.log('[LOGIN-DEBUG] onDidLoad: queuing callback')
     onDidLoadFns.push(fn)
   } else {
     if (mainWindow) {
+      console.log('[LOGIN-DEBUG] onDidLoad: calling immediately')
       fn(mainWindow)
+    } else {
+      console.log('[LOGIN-DEBUG] onDidLoad: ERROR - no mainWindow and no queue!')
     }
   }
 }

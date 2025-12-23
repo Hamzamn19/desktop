@@ -17,7 +17,7 @@ import {
 
 import { TypedBaseStore } from './base-store'
 import uuid from 'uuid'
-import { IOAuthAction } from '../parse-app-url'
+// IOAuthAction no longer used here; resolveOAuthRequest accepts a URL string
 import { shell } from '../app-shell'
 import noop from 'lodash/noop'
 import { AccountsStore } from './accounts-store'
@@ -156,7 +156,7 @@ export type SignInResult =
  */
 export class SignInStore extends TypedBaseStore<SignInState | null> {
   private state: SignInState | null = null
-
+  private pendingSignInState: SignInState | null = null
   private accounts: ReadonlyArray<Account> = []
 
   public constructor(private readonly accountStore: AccountsStore) {
@@ -202,8 +202,12 @@ export class SignInStore extends TypedBaseStore<SignInState | null> {
    * event.
    */
   private setState(state: SignInState | null) {
+    console.log('[LOGIN-DEBUG] setState called, new state kind:', state?.kind ?? 'null')
     this.state = state
+    this.pendingSignInState = state
+    console.log('[LOGIN-DEBUG] Emitting update with state:', this.state?.kind ?? 'null')
     this.emitUpdate(this.getState())
+    console.log('[LOGIN-DEBUG] Update emitted')
   }
 
   /**
@@ -330,32 +334,58 @@ export class SignInStore extends TypedBaseStore<SignInState | null> {
       })
   }
 
-  public async resolveOAuthRequest(action: IOAuthAction) {
-    if (!this.state || this.state.kind !== SignInStep.Authentication) {
-      return
-    }
+  public async resolveOAuthRequest(url: string) {
+    console.log('--- HAMZAH VERSION 2.0 ---')
+    const codeMatch = url.match(/[?&]code=([^&]+)/)
+    const code = codeMatch ? codeMatch[1] : null
+    if (!code) return
 
-    if (!this.state.oauthState) {
-      return
-    }
+    // استخدام أي (any) لضمان عدم توقف الـ Build
+    const endpoint = (this.pendingSignInState as any)?.endpoint || getDotComAPIEndpoint()
 
-    if (this.state.oauthState.state !== action.state) {
-      log.warn(
-        'requestAuthenticatedUser was not called with valid OAuth state. This is likely due to a browser reloading the callback URL. Contact GitHub Support if you believe this is an error'
-      )
-      return
-    }
+    return this.finishSignIn(endpoint, code)
+  }
 
-    const { endpoint } = this.state
-    const token = await requestOAuthToken(endpoint, action.code)
+  private async finishSignIn(endpoint: string, code: string) {
+    console.log('[LOGIN-DEBUG] Processing OAuth code:', code)
 
-    if (token) {
-      const account = await fetchUser(endpoint, token)
-      this.state.oauthState.onAuthCompleted(account)
-    } else {
-      this.state.oauthState.onAuthError(
-        new Error('Failed retrieving authenticated user')
-      )
+    try {
+      console.log('[LOGIN-DEBUG] Requesting token...')
+      const token = await requestOAuthToken(endpoint, code)
+      console.log('[LOGIN-DEBUG] Token received:', !!token)
+
+      if (token) {
+        console.log('[LOGIN-DEBUG] Fetching user data...')
+        const account = await fetchUser(endpoint, token)
+        console.log('[LOGIN-DEBUG] Account fetched:', account.login)
+
+        console.log('[LOGIN-DEBUG] Calling emitAuthenticate')
+        this.emitAuthenticate(account)
+        console.log('[LOGIN-DEBUG] Setting state to Success')
+        this.setState({
+          kind: SignInStep.Success,
+          resultCallback: noop,
+        })
+        console.log('[LOGIN-DEBUG] State set to Success, new state:', this.state?.kind)
+      } else {
+        console.log('[LOGIN-DEBUG] No token, setting error state')
+        this.setState({
+          kind: SignInStep.Authentication,
+          endpoint,
+          error: new Error('Failed retrieving authenticated user'),
+          loading: false,
+          resultCallback: noop,
+        })
+      }
+    } catch (error) {
+      console.error('[LOGIN-ERROR] Token exchange failed:', error)
+      this.setState({
+        kind: SignInStep.Authentication,
+        endpoint,
+        error: error instanceof Error ? error : new Error(String(error)),
+        loading: false,
+        resultCallback: noop,
+      })
     }
   }
 

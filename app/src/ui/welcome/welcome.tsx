@@ -68,6 +68,9 @@ export class Welcome extends React.Component<IWelcomeProps, IWelcomeState> {
   }
 
   public componentWillReceiveProps(nextProps: IWelcomeProps) {
+    console.log('[LOGIN-DEBUG] Welcome.componentWillReceiveProps called')
+    console.log('[LOGIN-DEBUG] Old signInState:', this.props.signInState?.kind ?? 'null')
+    console.log('[LOGIN-DEBUG] New signInState:', nextProps.signInState?.kind ?? 'null')
     this.advanceOnSuccessfulSignIn(nextProps)
   }
 
@@ -136,8 +139,15 @@ export class Welcome extends React.Component<IWelcomeProps, IWelcomeState> {
       return
     }
 
-    // Only advance when the state first changes...
-    if (this.props.signInState.kind === nextProps.signInState.kind) {
+    console.log('[LOGIN-DEBUG] advanceOnSuccessfulSignIn: current state:', this.props.signInState.kind)
+    console.log('[LOGIN-DEBUG] advanceOnSuccessfulSignIn: next state:', nextProps.signInState.kind)
+
+    // Allow reprocessing Authentication to handle OAuth retries even if the
+    // kind has not changed, but ignore truly redundant transitions.
+    if (
+      this.props.signInState.kind === nextProps.signInState.kind &&
+      nextProps.signInState.kind !== SignInStep.Authentication
+    ) {
       log.info(
         `[Welcome] kind ${this.props.signInState.kind} is the same as ${nextProps.signInState.kind}. ignoring...`
       )
@@ -146,8 +156,11 @@ export class Welcome extends React.Component<IWelcomeProps, IWelcomeState> {
 
     // ...and changes to success
     if (nextProps.signInState.kind === SignInStep.Success) {
+      console.log('[LOGIN-DEBUG] Success state detected! Advancing to ConfigureGit')
       this.advanceToStep(WelcomeStep.ConfigureGit)
-      this.props.dispatcher.resetSignInState()
+      // Don't reset immediately - let props propagate first
+      // This will be called by the parent when the Welcome flow completes
+      // this.props.dispatcher.resetSignInState()
     }
   }
 
@@ -198,6 +211,7 @@ export class Welcome extends React.Component<IWelcomeProps, IWelcomeState> {
   }
 
   private advanceToStep = (step: WelcomeStep) => {
+    console.log('[LOGIN-DEBUG] advanceToStep called with:', step)
     log.info(`[Welcome] advancing to step: ${step}`)
     if (step === WelcomeStep.SignInToEnterprise) {
       this.props.dispatcher.beginEnterpriseSignIn()
@@ -207,10 +221,13 @@ export class Welcome extends React.Component<IWelcomeProps, IWelcomeState> {
     // ConfigureGit step. This is necessary because the user could theoretically
     // have changed their global git config while the welcome flow was open.
     if (step === WelcomeStep.ConfigureGit) {
+      console.log('[LOGIN-DEBUG] Moving to ConfigureGit, refreshing git config')
       this.refreshGlobalGitAuthorInfo()
     }
 
+    console.log('[LOGIN-DEBUG] Setting currentStep to:', step)
     this.setState({ currentStep: step })
+    console.log('[LOGIN-DEBUG] State updated, currentStep is now:', this.state.currentStep)
   }
 
   private done = () => {

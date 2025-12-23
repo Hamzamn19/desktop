@@ -342,7 +342,7 @@ import {
   useExternalCredentialHelper,
   useExternalCredentialHelperDefault,
 } from '../trampoline/use-external-credential-helper'
-import { IOAuthAction } from '../parse-app-url'
+// IOAuthAction import removed; dispatcher now passes URL string to _resolveOAuthRequest
 import {
   ICustomIntegration,
   migratedCustomIntegration,
@@ -6194,8 +6194,8 @@ export class AppStore extends TypedBaseStore<IAppState> {
     return this._refreshRepository(repository)
   }
 
-  public _resolveOAuthRequest(action: IOAuthAction) {
-    return this.signInStore.resolveOAuthRequest(action)
+  public _resolveOAuthRequest(url: string) {
+    return this.signInStore.resolveOAuthRequest(url)
   }
 
   public _resetSignInState(): Promise<void> {

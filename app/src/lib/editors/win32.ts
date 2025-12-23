@@ -570,8 +570,8 @@ const getJetBrainsToolboxEditors = memoizeOne(async () => {
   const editors = new Array<WindowsExternalEditor>()
 
   for (const parent of [uninstallSubKey, wow64UninstallSubKey]) {
-    for (const key of enumerateKeys(HKEY.HKEY_CURRENT_USER, parent)) {
-      const m = re.exec(key)
+    for (const regKey of enumerateKeys(HKEY.HKEY_CURRENT_USER, parent)) {
+      const m = re.exec(regKey.subKey)
       if (m) {
         const [name, product] = m
         editors.push({
@@ -580,7 +580,7 @@ const getJetBrainsToolboxEditors = memoizeOne(async () => {
           registryKeys: [
             {
               key: HKEY.HKEY_CURRENT_USER,
-              subKey: `${parent}\\${key}`,
+              subKey: `${parent}\\${regKey.subKey}`,
             },
           ],
           displayNamePrefixes: [product],

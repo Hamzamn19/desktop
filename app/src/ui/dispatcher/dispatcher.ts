@@ -1923,7 +1923,7 @@ export class Dispatcher {
   public async dispatchURLAction(action: URLActionType): Promise<void> {
     switch (action.name) {
       case 'oauth':
-        await this.appStore._resolveOAuthRequest(action)
+        await this.appStore._resolveOAuthRequest(action.url)
 
         if (__DARWIN__) {
           // workaround for user reports that the application doesn't receive focus

@@ -5,6 +5,7 @@ export interface IOAuthAction {
   readonly name: 'oauth'
   readonly code: string
   readonly state: string
+  readonly url: string
 }
 
 export interface IOpenRepositoryFromURLAction {
@@ -78,7 +79,7 @@ export function parseAppURL(url: string): URLActionType {
     const code = getQueryStringValue(query, 'code')
     const state = getQueryStringValue(query, 'state')
     if (code != null && state != null) {
-      return { name: 'oauth', code, state }
+      return { name: 'oauth', code, state, url }
     } else {
       return unknown
     }

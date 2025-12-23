@@ -1,4 +1,4 @@
-import { NotificationCallback } from 'desktop-notifications/dist/notification-callback'
+import { NotificationCallback } from 'desktop-notifications'
 import { Commit, shortenSHA } from '../../models/commit'
 import { GitHubRepository } from '../../models/github-repository'
 import { PullRequest, getPullRequestCommitRef } from '../../models/pull-request'
@@ -109,7 +109,13 @@ export class NotificationsStore {
     this.handleAliveEvent(e, false)
 
   public onNotificationEventReceived: NotificationCallback<DesktopAliveEvent> =
-    async (event, id, userInfo) => this.handleAliveEvent(userInfo, true)
+    async (event, id, userInfo) => {
+      if (userInfo !== undefined) {
+        return this.handleAliveEvent(userInfo, true)
+      }
+      // Optionally, handle the case where userInfo is undefined
+      return
+    }
 
   public simulateAliveEvent(event: DesktopAliveEvent) {
     if (__DEV__ || __RELEASE_CHANNEL__ === 'test') {

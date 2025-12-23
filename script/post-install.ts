@@ -11,6 +11,11 @@ const root = Path.dirname(__dirname)
 const options: SpawnSyncOptions = {
   cwd: root,
   stdio: 'inherit',
+  env: {
+    ...process.env,
+    // Ensure dugite downloads the correct platform binaries when running on Linux
+    DUGITE_PLATFORM: process.env.DUGITE_PLATFORM ?? process.platform,
+  },
 }
 
 function findYarnVersion(callback: (path: string) => void) {

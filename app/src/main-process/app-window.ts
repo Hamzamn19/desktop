@@ -207,7 +207,9 @@ export class AppWindow {
       ipcWebContents.send(this.window.webContents, 'native-theme-updated')
     })
 
-    this.setupAutoUpdater()
+    if (!__LINUX__) {
+      this.setupAutoUpdater()
+    }
   }
 
   /**
@@ -390,6 +392,9 @@ export class AppWindow {
   }
 
   public setupAutoUpdater() {
+    if (__LINUX__) {
+      return
+    }
     autoUpdater.on('error', (error: Error) => {
       this.isDownloadingUpdate = false
       ipcWebContents.send(this.window.webContents, 'auto-updater-error', error)
@@ -429,6 +434,9 @@ export class AppWindow {
   }
 
   public async checkForUpdates(url: string) {
+    if (__LINUX__) {
+      return undefined
+    }
     try {
       autoUpdater.setFeedURL({ url: await trySetUpdaterGuid(url) })
       autoUpdater.checkForUpdates()
@@ -439,6 +447,9 @@ export class AppWindow {
   }
 
   public quitAndInstallUpdate() {
+    if (__LINUX__) {
+      return
+    }
     autoUpdater.quitAndInstall()
   }
 

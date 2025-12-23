@@ -5,7 +5,10 @@ function setItem(key: string, login: string, value: string) {
 }
 
 function getItem(key: string, login: string) {
-  return keytar.getPassword(key, login)
+  return keytar.getPassword(key, login).then(value => {
+    console.log(`[TOKEN-STORE] getItem ${key} / ${login} -> ${value ? 'FOUND' : 'MISSING'}`)
+    return value
+  })
 }
 
 function deleteItem(key: string, login: string) {

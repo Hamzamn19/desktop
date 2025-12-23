@@ -1,0 +1,6 @@
+{
+  "name": "keytar",
+  "version": "0.0.0-shim",
+  "main": "index.js",
+  "license": "MIT"
+}

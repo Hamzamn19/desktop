@@ -112,7 +112,9 @@ export class Start extends React.Component<IStartProps, {}> {
       event.preventDefault()
     }
 
+    console.log('[LOGIN-DEBUG] signInWithBrowser clicked')
     this.props.advance(WelcomeStep.SignInToDotComWithBrowser)
+    console.log('[LOGIN-DEBUG] Calling requestBrowserAuthenticationToDotcom')
     this.props.dispatcher.requestBrowserAuthenticationToDotcom()
   }
 

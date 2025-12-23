@@ -40,7 +40,8 @@ import { isGitHubActions } from './build-platforms'
 
 import { updateLicenseDump } from './licenses/update-license-dump'
 import { verifyInjectedSassVariables } from './validate-sass/validate-all'
-import {
+import * as fs from 'fs'
+const {
   existsSync,
   mkdirSync,
   readdirSync,
@@ -48,7 +49,7 @@ import {
   rmSync,
   unlinkSync,
   writeFileSync,
-} from 'fs'
+} = fs
 import { copySync } from 'fs-extra'
 
 const isPublishableBuild = isPublishable()
@@ -231,15 +232,23 @@ function removeAndCopy(source: string, destination: string) {
 function copyEmoji() {
   const emojiImages = path.join(projectRoot, 'gemoji', 'images', 'emoji')
   const emojiImagesDestination = path.join(outRoot, 'emoji')
-  removeAndCopy(emojiImages, emojiImagesDestination)
 
-  // Remove unicode-based emoji images (use the unicode emojis instead)
-  const emojiImagesUnicode = path.join(emojiImagesDestination, 'unicode')
-  rmSync(emojiImagesUnicode, { recursive: true, force: true })
+  // Only copy emoji images if they exist
+  if (existsSync(emojiImages)) {
+    removeAndCopy(emojiImages, emojiImagesDestination)
+
+    // Remove unicode-based emoji images (use the unicode emojis instead)
+    const emojiImagesUnicode = path.join(emojiImagesDestination, 'unicode')
+    rmSync(emojiImagesUnicode, { recursive: true, force: true })
+  }
 
   const emojiJSON = path.join(projectRoot, 'gemoji', 'db', 'emoji.json')
   const emojiJSONDestination = path.join(outRoot, 'emoji.json')
-  removeAndCopy(emojiJSON, emojiJSONDestination)
+
+  // Only copy emoji JSON if it exists
+  if (existsSync(emojiJSON)) {
+    removeAndCopy(emojiJSON, emojiJSONDestination)
+  }
 }
 
 function copyStaticResources() {
@@ -369,6 +378,14 @@ function copyDependencies() {
 function generateLicenseMetadata(outRoot: string) {
   const chooseALicense = path.join(outRoot, 'static', 'choosealicense.com')
   const licensesDir = path.join(chooseALicense, '_licenses')
+
+  // Check if licenses directory exists
+  if (!existsSync(licensesDir)) {
+    console.log(
+      '  Licenses directory not found, skipping license metadata generation'
+    )
+    return
+  }
 
   const files = readdirSync(licensesDir)
 

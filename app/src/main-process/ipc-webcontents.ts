@@ -19,6 +19,7 @@ export function send<T extends keyof RequestChannels>(
     }
     log.error(msg)
   } else {
-    webContents.send(channel, ...args)
+    const argsArray = (args || []) as unknown as any[]
+    webContents.send(channel, ...argsArray)
   }
 }

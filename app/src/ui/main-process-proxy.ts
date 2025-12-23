@@ -28,7 +28,7 @@ export function invokeProxy<T extends keyof RequestResponseChannels>(
     // This as any cast here may seem unsafe but it isn't since we're guaranteed
     // that numArgs will match the parameter count of the IPC declaration.
     args = args.length !== numArgs ? (args.slice(0, numArgs) as any) : args
-    return ipcRenderer.invoke(channel, ...args)
+    return ipcRenderer.invoke(channel, ...(args || []))
   }
 }
 
@@ -55,7 +55,7 @@ export function sendProxy<T extends keyof RequestChannels>(
     // This as any cast here may seem unsafe but it isn't since we're guaranteed
     // that numArgs will match the parameter count of the IPC declaration.
     args = args.length !== numArgs ? (args.slice(0, numArgs) as any) : args
-    ipcRenderer.send(channel, ...args)
+    ipcRenderer.send(channel, ...(args || []))
   }
 }
 

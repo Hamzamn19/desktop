@@ -4,7 +4,7 @@ import webpack from 'webpack'
 import merge from 'webpack-merge'
 import { getReplacements } from './app-info'
 
-export const externals = ['7zip']
+export const externals = ['7zip', 'windows-argv-parser']
 
 const outputDir = 'out'
 export const replacements = getReplacements()
@@ -45,6 +45,19 @@ const commonConfig: webpack.Configuration = {
   },
   resolve: {
     extensions: ['.js', '.ts', '.tsx'],
+    alias: {
+      'desktop-notifications': path.resolve(
+        __dirname,
+        'src/lib/desktop-notifications'
+      ),
+      'registry-js': path.resolve(__dirname, 'src/lib/shims/registry-js'),
+      'fs-admin': path.resolve(__dirname, 'src/lib/shims/fs-admin'),
+      'desktop-trampoline': path.resolve(
+        __dirname,
+        'src/lib/shims/desktop-trampoline'
+      ),
+      keytar: path.resolve(__dirname, 'src/lib/shims/keytar'),
+    },
   },
   node: {
     __dirname: false,

@@ -61,6 +61,38 @@ Bash
 
 ./"GitHub Desktop-3.5.4.AppImage" --no-sandbox
 
+📦 Flatpak (module for prebuilt `dist/` bundle)
+
+If you already have a precompiled Electron bundle (for example, an unpacked folder in `dist/`), you can package it in Flatpak using a `buildsystem: simple` module that just copies files into `/app`.
+
+Add a module like this to your Flatpak manifest (replace the `path:` and `EXECUTABLE` lines to match your bundle):
+
+```yaml
+modules:
+  - name: github-desktop-prebuilt
+    buildsystem: simple
+    build-commands:
+      # Stage the prebuilt app under /app/opt/<app>
+      - install -d /app/opt/github-desktop
+      - cp -a . /app/opt/github-desktop/
+
+      # Create a launcher on PATH
+      - |
+        cat > /app/bin/github-desktop <<'EOF'
+        #!/bin/sh
+        set -eu
+        EXECUTABLE="/app/opt/github-desktop/GitHub Desktop"
+        exec "$EXECUTABLE" "$@"
+        EOF
+      - chmod +x /app/bin/github-desktop
+
+    sources:
+      # Point this at the *directory* containing your unpacked Electron build
+      # e.g. dist/linux-unpacked or dist/GitHub Desktop-linux-x64
+      - type: dir
+        path: dist/linux-unpacked
+```
+
 🎓 About the Developer
 Developed by Hamzah, a Computer Engineering student at Beykoz University, Istanbul. This project focuses on bridging the gap between security and usability for Linux developers.
 
